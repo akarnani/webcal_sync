@@ -159,11 +159,11 @@ func main() {
 		c, u, d := diffEvents(cfg, parseICal(cfg.URL), client.GetEventsForAttribute(map[string]string{"url": fmt.Sprintf("%x", sha256.Sum256([]byte(cfg.URL)))}))
 		fmt.Println(cfg.URL, len(c), len(u), len(d))
 
-		// for _, e := range c {
-		// 	if err := client.CreateEvent(e); err != nil {
-		// 		log.Fatalf("failed to create event: %v", err)
-		// 	}
-		// }
+		for _, e := range c {
+			if err := client.CreateEvent(e); err != nil {
+				log.Fatalf("failed to create event: %v", err)
+			}
+		}
 
 		for _, e := range u {
 			if err := client.UpdateEvent(e); err != nil {
