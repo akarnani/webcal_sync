@@ -1,11 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"reflect"
+	"regexp"
 	"strings"
 	"time"
 
@@ -13,6 +16,8 @@ import (
 	"github.com/apognu/gocal"
 	"google.golang.org/api/calendar/v3"
 )
+
+var dateFormatFix = regexp.MustCompile(`(?m)^(DTSTAMP:.*)T4(.*)$`)
 
 func parseICal(url string) []gocal.Event {
 	resp, err := http.Get(url)
@@ -22,7 +27,15 @@ func parseICal(url string) []gocal.Event {
 
 	defer resp.Body.Close()
 
-	c := gocal.NewParser(resp.Body)
+	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal("Failed to read calendar body")
+	}
+
+	//This is really remarkably dumb but some sources give back garbage
+	body := bytes.NewReader(dateFormatFix.ReplaceAll(b, []byte("$1")))
+
+	c := gocal.NewParser(body)
 	if err := c.Parse(); err != nil {
 		panic(err)
 	}
@@ -116,7 +129,15 @@ func diffEvents(cfg Config, up []gocal.Event, gevent []*calendar.Event) ([]*cale
 	del := make([]string, 0, len(ids))
 	for _, e := range ids {
 		if e.Status != "cancelled" {
-			del = append(del, e.Id)
+			t, err := time.Parse(e.Start.DateTime, time.RFC3339)
+			if err != nil {
+				log.Fatalf("Unable to parse date time %s: %v", e.Start.DateTime, err)
+			}
+			if time.Now().Before(t) {
+				del = append(del, e.Id)
+			} else {
+				log.Printf("Not deleting event %s because it already started", e.Summary)
+			}
 		}
 	}
 	return create, update, del
