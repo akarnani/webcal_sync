@@ -87,7 +87,7 @@ func diffEvents(cfg Config, up []gocal.Event, gevent []*calendar.Event) ([]*cale
 		}
 		t, err := time.Parse(time.RFC3339, g.Start.DateTime)
 		if err != nil {
-			log.Fatalf("Unable to parse date time %s: %v", g.Start.DateTime, err)
+			log.Fatalf("Unable to parse start date time %s: %v", g.Start.DateTime, err)
 		}
 		if !t.Equal(*e.Start) {
 			n.Start = &calendar.EventDateTime{DateTime: e.Start.Format(time.RFC3339)}
@@ -95,7 +95,7 @@ func diffEvents(cfg Config, up []gocal.Event, gevent []*calendar.Event) ([]*cale
 		}
 		t, err = time.Parse(time.RFC3339, g.End.DateTime)
 		if err != nil {
-			log.Fatalf("Unable to parse date time %s: %v", g.End.DateTime, err)
+			log.Fatalf("Unable to parse end date time %s: %v", g.End.DateTime, err)
 		}
 		if !t.Equal(*e.End) {
 			n.End = &calendar.EventDateTime{DateTime: e.End.Format(time.RFC3339)}
@@ -129,9 +129,9 @@ func diffEvents(cfg Config, up []gocal.Event, gevent []*calendar.Event) ([]*cale
 	del := make([]string, 0, len(ids))
 	for _, e := range ids {
 		if e.Status != "cancelled" {
-			t, err := time.Parse(e.Start.DateTime, time.RFC3339)
+			t, err := time.Parse(time.RFC3339, e.Start.DateTime)
 			if err != nil {
-				log.Fatalf("Unable to parse date time %s: %v", e.Start.DateTime, err)
+				log.Fatalf("Unable to parse canceled date time %s: %v", e.Start.DateTime, err)
 			}
 			if time.Now().Before(t) {
 				del = append(del, e.Id)
