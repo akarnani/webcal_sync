@@ -17,7 +17,7 @@ import (
 	"google.golang.org/api/calendar/v3"
 )
 
-var dateFormatFix = regexp.MustCompile(`(?m)^(DTSTAMP:.*)T4(.*)$`)
+var dateFormatFix = regexp.MustCompile(`(?m)^(DTSTAMP:.*)T(.*)$`)
 
 func parseICal(url string) []gocal.Event {
 	resp, err := http.Get(url)
