@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -15,6 +16,7 @@ import (
 	"github.com/akarnani/webcal_sync/gcal"
 	"github.com/apognu/gocal"
 	"google.golang.org/api/calendar/v3"
+	"google.golang.org/api/googleapi"
 )
 
 var dateFormatFix = regexp.MustCompile(`(?m)^(DTSTAMP:.*)T(.*)$`)
@@ -63,12 +65,22 @@ func diffEvents(cfg Config, up []gocal.Event, gevent []*calendar.Event) ([]*cale
 		ids[e.ICalUID] = e
 	}
 
+	seenIds := make(map[string]interface{})
+
 	for _, e := range up {
 		if (*e.Start).Before(time.Now()) {
 			continue
 		}
 
 		i := getIDForEvent(cfg, e)
+
+		if _, ok := seenIds[i]; ok {
+			log.Printf("ID %s is a duplicate, not processing", i)
+			continue
+		}
+
+		seenIds[i] = nil
+
 		g, ok := ids[i]
 		delete(ids, i)
 		if !ok {
@@ -170,18 +182,27 @@ func getIDForEvent(cfg Config, e gocal.Event) string {
 	case "":
 		return e.Uid
 	default:
-		panic(fmt.Sprintf("unknown id format %s", cfg.IDFormat))
+		log.Panicf("unknown id format %s", cfg.IDFormat)
 	}
+
+	//can't be reached due to default's Panicf
+	return ""
 }
 
 func main() {
 	client := gcal.NewClient()
 	for _, cfg := range getConfig() {
+		log.Printf("Starting on calendar %s", cfg.URL)
 		c, u, d := diffEvents(cfg, parseICal(cfg.URL), client.GetEventsForAttribute(map[string]string{"url": fmt.Sprintf("%x", sha256.Sum256([]byte(cfg.URL)))}))
-		fmt.Println(cfg.URL, len(c), len(u), len(d))
+		log.Println(cfg.URL, len(c), len(u), len(d))
 
 		for _, e := range c {
 			if err := client.CreateEvent(e); err != nil {
+				var gErr *googleapi.Error
+				if errors.As(err, &gErr) && gErr.Code == http.StatusConflict {
+					log.Printf("Event already existed: %v, %v", e, gErr)
+					continue
+				}
 				log.Fatalf("failed to create event: %v", err)
 			}
 		}
@@ -196,6 +217,8 @@ func main() {
 				log.Fatalf("failed to update event: %v", err)
 			}
 		}
+
+		log.Printf("finished with calendar")
 
 	}
 }
