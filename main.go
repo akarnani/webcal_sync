@@ -38,6 +38,9 @@ func parseICal(url string) []gocal.Event {
 	body := bytes.NewReader(dateFormatFix.ReplaceAll(b, []byte("$1")))
 
 	c := gocal.NewParser(body)
+	c.Strict = gocal.StrictParams{
+		Mode: gocal.StrictModeFailAttribute,
+	}
 	if err := c.Parse(); err != nil {
 		panic(err)
 	}
@@ -101,7 +104,7 @@ func diffEvents(cfg Config, up []gocal.Event, gevent []*calendar.Event) ([]*cale
 		if err != nil {
 			log.Fatalf("Unable to parse start date time %s: %v", g.Start.DateTime, err)
 		}
-		if !t.Equal(*e.Start) {
+		if !t.Truncate(time.Second).Equal((*e.Start).Truncate(time.Second)) {
 			n.Start = &calendar.EventDateTime{DateTime: e.Start.Format(time.RFC3339)}
 			changed = true
 		}
@@ -109,7 +112,7 @@ func diffEvents(cfg Config, up []gocal.Event, gevent []*calendar.Event) ([]*cale
 		if err != nil {
 			log.Fatalf("Unable to parse end date time %s: %v", g.End.DateTime, err)
 		}
-		if !t.Equal(*e.End) {
+		if !t.Truncate(time.Second).Equal((*e.End).Truncate(time.Second)) {
 			n.End = &calendar.EventDateTime{DateTime: e.End.Format(time.RFC3339)}
 			changed = true
 		}
