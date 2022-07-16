@@ -100,20 +100,24 @@ func diffEvents(cfg Config, up []gocal.Event, gevent []*calendar.Event) ([]*cale
 			n.Summary = e.Summary
 			changed = true
 		}
-		t, err := time.Parse(time.RFC3339, g.Start.DateTime)
-		if err != nil {
-			log.Fatalf("Unable to parse start date time %s: %v", g.Start.DateTime, err)
-		}
-		if !t.Truncate(time.Second).Equal((*e.Start).Truncate(time.Second)) {
-			n.Start = &calendar.EventDateTime{DateTime: e.Start.Format(time.RFC3339)}
+
+		ts := parseGCalTime(g.Start)
+		te := parseGCalTime(g.End)
+
+		allDay := isAllDayEvent(e)
+
+		if !compareDateTime(ts, *e.Start) || (allDay && g.Start.DateTime != "") {
+			n.Start = getEventTime(*e.Start, allDay)
 			changed = true
 		}
-		t, err = time.Parse(time.RFC3339, g.End.DateTime)
-		if err != nil {
-			log.Fatalf("Unable to parse end date time %s: %v", g.End.DateTime, err)
+
+		// if all day only the date matters.  However gocal's end time is 1 milisecond before
+		// the next day which makes comparing dates hard.  So, just truncate the time for simplicity
+		if allDay {
+			*e.End = e.End.Truncate(24 * time.Hour)
 		}
-		if !t.Truncate(time.Second).Equal((*e.End).Truncate(time.Second)) {
-			n.End = &calendar.EventDateTime{DateTime: e.End.Format(time.RFC3339)}
+		if !compareDateTime(te, *e.End) || (allDay && g.End.DateTime != "") {
+			n.End = getEventTime(*e.End, allDay)
 			changed = true
 		}
 		if e.Description != g.Description {
@@ -160,18 +164,15 @@ func diffEvents(cfg Config, up []gocal.Event, gevent []*calendar.Event) ([]*cale
 }
 
 func iCalToGEvent(cfg Config, e gocal.Event) *calendar.Event {
+	allDay := isAllDayEvent(e)
 	return &calendar.Event{
 		Summary:     e.Summary,
 		Location:    e.Location,
 		Description: e.Description,
+		Start:       getEventTime(*e.Start, allDay),
+		End:         getEventTime(*e.End, allDay),
 		ICalUID:     getIDForEvent(cfg, e),
 		ColorId:     cfg.ColorID,
-		Start: &calendar.EventDateTime{
-			DateTime: e.Start.Format(time.RFC3339),
-		},
-		End: &calendar.EventDateTime{
-			DateTime: e.End.Format(time.RFC3339),
-		},
 		ExtendedProperties: &calendar.EventExtendedProperties{
 			Private: map[string]string{"url": fmt.Sprintf("%x", sha256.Sum256([]byte(cfg.URL)))},
 		},
@@ -190,6 +191,46 @@ func getIDForEvent(cfg Config, e gocal.Event) string {
 
 	//can't be reached due to default's Panicf
 	return ""
+}
+
+func isAllDayEvent(e gocal.Event) bool {
+	return e.RawStart.Params["VALUE"] == "DATE" || e.RawEnd.Params["VALUE"] == "DATE"
+}
+
+func compareDateTime(x, y time.Time) bool {
+	return x.Truncate(time.Second).Equal(y.Truncate(time.Second))
+}
+
+func getEventTime(t time.Time, allDay bool) *calendar.EventDateTime {
+	if allDay {
+		return &calendar.EventDateTime{
+			Date:       t.Format("2006-01-02"),
+			NullFields: []string{"DateTime"},
+		}
+	}
+
+	return &calendar.EventDateTime{
+		DateTime:   t.Truncate(time.Second).Format(time.RFC3339),
+		NullFields: []string{"Date"},
+	}
+}
+
+func parseGCalTime(t *calendar.EventDateTime) time.Time {
+	if t.Date != "" {
+		out, err := time.Parse("2006-01-02", t.Date)
+		if err != nil {
+			log.Fatalf("Unable to parse date %s: %v", t.Date, err)
+		}
+
+		return out
+	}
+
+	out, err := time.Parse(time.RFC3339, t.DateTime)
+	if err != nil {
+		log.Fatalf("Unable to parse date time %s: %v", t.DateTime, err)
+	}
+
+	return out
 }
 
 func main() {
