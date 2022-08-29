@@ -3,8 +3,8 @@ package gcal
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"log"
+	"os"
 	"time"
 
 	"golang.org/x/oauth2/google"
@@ -18,7 +18,7 @@ type Client struct {
 
 func NewClient() *Client {
 	ctx := context.Background()
-	b, err := ioutil.ReadFile("credentials.json")
+	b, err := os.ReadFile("credentials.json")
 	if err != nil {
 		log.Fatalf("Unable to read client secret file: %v", err)
 	}

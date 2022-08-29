@@ -1,7 +1,7 @@
 package main
 
 import (
-	"io/ioutil"
+	"os"
 
 	"gopkg.in/yaml.v2"
 )
@@ -13,7 +13,7 @@ type Config struct {
 }
 
 func getConfig() []Config {
-	f, err := ioutil.ReadFile("config.yml")
+	f, err := os.ReadFile("config.yml")
 	if err != nil {
 		panic(err)
 	}
