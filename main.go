@@ -166,9 +166,9 @@ func diffEvents(cfg Config, up []gocal.Event, gevent []*calendar.Event) ([]*cale
 func iCalToGEvent(cfg Config, e gocal.Event) *calendar.Event {
 	allDay := isAllDayEvent(e)
 	return &calendar.Event{
-		Summary:     e.Summary,
-		Location:    e.Location,
-		Description: e.Description,
+		Summary:     jsonEscape(e.Summary),
+		Location:    jsonEscape(e.Location),
+		Description: jsonEscape(e.Description),
 		Start:       getEventTime(*e.Start, allDay),
 		End:         getEventTime(*e.End, allDay),
 		ICalUID:     getIDForEvent(cfg, e),
