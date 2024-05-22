@@ -139,6 +139,22 @@ func diffEvents(cfg Config, up []gocal.Event, gevent []*calendar.Event) ([]*cale
 			changed = true
 		}
 
+		if cfg.Reminder != 0 {
+			//reminder configured
+			if g.Reminders == nil || len(g.Reminders.Overrides) == 0 || g.Reminders.Overrides[0].Minutes != int64(cfg.Reminder) || g.Reminders.UseDefault {
+				n.Reminders = getReminderForConfig(cfg)
+				changed = true
+			}
+		} else {
+			//reminder not configured
+			if g.Reminders != nil {
+				n.Reminders = &calendar.EventReminders{
+					ForceSendFields: []string{"Overrides"},
+				}
+				changed = true
+			}
+		}
+
 		if changed {
 			update = append(update, n)
 		}
@@ -175,6 +191,25 @@ func iCalToGEvent(cfg Config, e gocal.Event) *calendar.Event {
 		ColorId:     cfg.ColorID,
 		ExtendedProperties: &calendar.EventExtendedProperties{
 			Private: map[string]string{"url": fmt.Sprintf("%x", sha256.Sum256([]byte(cfg.URL)))},
+		},
+		Reminders: getReminderForConfig(cfg),
+	}
+}
+
+func getReminderForConfig(cfg Config) *calendar.EventReminders {
+	if cfg.Reminder == 0 { //zero value means not specified
+		return nil
+	}
+
+	return &calendar.EventReminders{
+		Overrides: []*calendar.EventReminder{
+			{
+				Method:  "popup",
+				Minutes: int64(cfg.Reminder),
+			},
+		},
+		ForceSendFields: []string{
+			"UseDefault",
 		},
 	}
 }

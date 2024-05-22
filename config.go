@@ -10,6 +10,7 @@ type Config struct {
 	URL      string `yaml:"url"`
 	ColorID  string `yaml:"color_id"`
 	IDFormat string `yaml:"id_format"`
+	Reminder int    `yaml:"reminder"`
 }
 
 func getConfig() []Config {
