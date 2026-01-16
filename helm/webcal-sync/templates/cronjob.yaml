@@ -37,16 +37,22 @@ spec:
             resources:
               {{- toYaml . | nindent 14 }}
             {{- end }}
-            {{- if .Values.persistence.enabled }}
+            {{- if or .Values.persistence.enabled .Values.hostPath.enabled }}
             volumeMounts:
             - name: config
               mountPath: {{ .Values.persistence.mountPath }}
             {{- end }}
-          {{- if .Values.persistence.enabled }}
+          {{- if or .Values.persistence.enabled .Values.hostPath.enabled }}
           volumes:
           - name: config
+            {{- if .Values.hostPath.enabled }}
+            hostPath:
+              path: {{ .Values.hostPath.path }}
+              type: DirectoryOrCreate
+            {{- else }}
             persistentVolumeClaim:
               claimName: {{ include "webcal-sync.pvcName" . }}
+            {{- end }}
           {{- end }}
           {{- with .Values.nodeSelector }}
           nodeSelector:

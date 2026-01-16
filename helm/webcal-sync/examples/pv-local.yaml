@@ -1,0 +1,32 @@
+# Example PersistentVolume using local storage
+# Only needed if your cluster doesn't support dynamic provisioning
+# Adjust storage class, capacity, and path based on your cluster setup
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: webcal-sync-pv
+  labels:
+    app: webcal-sync
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  # For local testing (minikube, kind, etc.)
+  hostPath:
+    path: /mnt/data/webcal-sync
+    type: DirectoryOrCreate
+  # Uncomment for local persistent volume (requires path on specific node)
+  # local:
+  #   path: /mnt/disks/ssd1/webcal-sync
+  # nodeAffinity:
+  #   required:
+  #     nodeSelectorTerms:
+  #     - matchExpressions:
+  #       - key: kubernetes.io/hostname
+  #         operator: In
+  #         values:
+  #         - node-1
+  storageClassName: ""  # Empty for manual binding
+  persistentVolumeReclaimPolicy: Retain

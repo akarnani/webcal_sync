@@ -27,13 +27,21 @@ Example `config.yml`:
   reminder: 30
 ```
 
-### 2. Create PersistentVolume (if needed)
+### 2. Create PersistentVolume (Optional)
 
-If your cluster doesn't support dynamic provisioning, create a PersistentVolume first:
+**Most clusters with dynamic provisioning (AWS, GCP, Azure) don't need this step** - the PersistentVolumeClaim will automatically create storage.
+
+If your cluster doesn't support dynamic provisioning (e.g., local/on-premises), create a PersistentVolume first. See example PV files:
 
 ```bash
-kubectl create -f pv.yaml
+# For local testing (minikube, kind)
+kubectl apply -f examples/pv-local.yaml
+
+# OR for NFS storage
+kubectl apply -f examples/pv-nfs.yaml
 ```
+
+Check `examples/README.md` for more details and cloud provider storage class options.
 
 ### 3. Create ConfigMap with Initial Files
 

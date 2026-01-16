@@ -20,6 +20,12 @@ persistence:
   # Path where config files are mounted
   mountPath: /app/config
 
+# HostPath volume (alternative to PVC for local development)
+# Useful for Rancher Desktop, Docker Desktop, minikube, etc.
+hostPath:
+  enabled: false
+  path: ""  # e.g., /Users/yourname/webcal-sync-config
+
 # Resource limits
 resources:
   limits:

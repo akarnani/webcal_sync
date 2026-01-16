@@ -1,0 +1,34 @@
+# Values for local development with Rancher Desktop / Docker Desktop
+# Uses hostPath to mount a directory from your Mac instead of PVC
+
+image:
+  repository: akarnani/webcal_sync
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# Run every 2 hours for testing
+schedule: "0 */2 * * *"
+
+# Disable PVC and use hostPath instead
+persistence:
+  enabled: false
+
+# Add hostPath volume directly
+# IMPORTANT: Change this path to a directory on your Mac where you have
+# config.yml and credentials.json (token.json will be generated)
+hostPath:
+  enabled: true
+  path: /Users/andrew/webcal-sync-config  # Change this to your directory!
+  # Example: path: /Users/yourname/webcal-sync-config
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+# OAuth setup configuration
+oauthSetup:
+  enabled: false  # Set to true when you need to run initial OAuth flow
