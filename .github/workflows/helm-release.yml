@@ -1,0 +1,72 @@
+name: Release Helm Chart
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'helm/**'
+  release:
+    types: [created]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: v3.12.0
+
+      - name: Update Chart Version on Release
+        if: github.event_name == 'release'
+        run: |
+          RELEASE_VERSION=${GITHUB_REF#refs/tags/}
+          # Remove 'v' prefix if present
+          CHART_VERSION=${RELEASE_VERSION#v}
+          sed -i "s/^version:.*/version: ${CHART_VERSION}/" helm/webcal-sync/Chart.yaml
+          sed -i "s/^appVersion:.*/appVersion: \"${RELEASE_VERSION}\"/" helm/webcal-sync/Chart.yaml
+          git add helm/webcal-sync/Chart.yaml
+          git commit -m "Update chart version to ${CHART_VERSION}" || true
+
+      - name: Package Helm Chart
+        run: |
+          mkdir -p .cr-release-packages
+          helm package helm/webcal-sync -d .cr-release-packages
+
+      - name: Checkout gh-pages
+        uses: actions/checkout@v3
+        with:
+          ref: gh-pages
+          path: gh-pages
+
+      - name: Copy chart package to gh-pages
+        run: |
+          mkdir -p gh-pages/charts
+          cp .cr-release-packages/*.tgz gh-pages/charts/
+
+      - name: Update Helm repo index
+        run: |
+          cd gh-pages
+          helm repo index charts --url https://akarnani.github.io/webcal_sync/charts
+
+      - name: Commit and push to gh-pages
+        run: |
+          cd gh-pages
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+          git add charts/
+          git commit -m "Release Helm chart $(helm show chart ../helm/webcal-sync | grep version | awk '{print $2}')" || exit 0
+          git push
