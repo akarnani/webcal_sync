@@ -1,3 +1,21 @@
 apiVersion: v1
-entries: {}
-generated: "2026-01-16T01:19:49Z"
+entries:
+  webcal-sync:
+  - apiVersion: v2
+    appVersion: 0.5.0
+    created: "2026-01-16T01:24:57.249672688Z"
+    description: A Helm chart for webcal_sync - syncs iCal feeds to Google Calendar
+    digest: 2f6732383a42802e379ca5569fd38d674ec4d4f74b7ee0850f58d5845bab08f6
+    keywords:
+    - calendar
+    - ical
+    - google-calendar
+    - sync
+    maintainers:
+    - name: Andrew Karnani
+    name: webcal-sync
+    type: application
+    urls:
+    - https://akarnani.github.io/webcal_sync/charts/webcal-sync-0.1.0.tgz
+    version: 0.1.0
+generated: "2026-01-16T01:24:57.249111108Z"
