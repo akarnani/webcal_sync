@@ -1,0 +1,56 @@
+# Default values for webcal-sync
+
+image:
+  repository: "akarnani/webcal_sync"
+  pullPolicy: IfNotPresent
+  tag: "latest" # Override with specific version
+
+# CronJob schedule (default: run every hour)
+schedule: "0 * * * *"
+
+# Volume configuration for storing config files
+persistence:
+  enabled: true
+  # Existing PVC or create new one
+  existingClaim: ""
+  # Storage class for dynamic provisioning
+  storageClass: ""
+  accessMode: ReadWriteOnce
+  size: 1Gi
+  # Path where config files are mounted
+  mountPath: /app/config
+
+# Resource limits
+resources:
+  limits:
+    cpu: 500m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+# Pod configuration
+podAnnotations: {}
+podSecurityContext: {}
+securityContext: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# CronJob specific settings
+cronjob:
+  # Number of successful finished jobs to retain
+  successfulJobsHistoryLimit: 3
+  # Number of failed finished jobs to retain
+  failedJobsHistoryLimit: 1
+  # Restart policy for the job
+  restartPolicy: OnFailure
+  # Backoff limit for failed jobs
+  backoffLimit: 3
+
+# OAuth setup job configuration
+oauthSetup:
+  # Enable the oauth setup job (set to false after initial setup)
+  enabled: false
+  # TTL for the completed job (in seconds)
+  ttlSecondsAfterFinished: 3600

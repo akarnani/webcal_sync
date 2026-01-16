@@ -1,0 +1,26 @@
+# Git
+.git
+.gitignore
+
+# Documentation
+*.md
+LICENSE
+
+# GitHub
+.github
+
+# Helm
+helm
+
+# Config files (should be mounted at runtime)
+config.yml
+credentials.json
+token.json
+
+# Build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+webcal_sync
