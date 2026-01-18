@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	_ "time/tzdata" // embed timezone info in the binary to handle calendars that don't use UTC
 
 	"github.com/akarnani/webcal_sync/gcal"
 	"github.com/apognu/gocal"
