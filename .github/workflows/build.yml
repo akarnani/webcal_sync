@@ -1,14 +1,25 @@
 name: Build Binary
-on: ["push"]
+
+on:
+  workflow_run:
+    workflows: ["Run Tests"]
+    types:
+      - completed
+    branches:
+      - main
+      - '**'
 
 jobs:
-  release-linux-amd64:
-    name: build linux/amd64
+  build:
+    name: Build binary
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-go@v3
         with:
-          go-version: '1.19'
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
       - run: go version
       - run: go build *.go

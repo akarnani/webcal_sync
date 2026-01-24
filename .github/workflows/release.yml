@@ -4,9 +4,21 @@ on:
     types: [created]
 
 jobs:
-  release-linux-amd64:
-    name: release linux/amd64
+  test:
+    name: Run tests
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+      - run: go version
+      - run: go test -v ./...
+
+  release:
+    name: release binaries
+    runs-on: ubuntu-latest
+    needs: test
     strategy:
       matrix:
         goos: ["linux", "darwin"]
@@ -18,3 +30,4 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           goos: ${{ matrix.goos }}
           goarch: ${{ matrix.goarch }}
+          go_version: '1.21'

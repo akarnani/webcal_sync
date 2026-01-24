@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"reflect"
 	"regexp"
@@ -32,7 +32,8 @@ func parseICal(url string) []gocal.Event {
 
 	b, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatal("Failed to read calendar body")
+		slog.Error("Failed to read calendar body", "error", err)
+		panic("Failed to read calendar body")
 	}
 
 	//This is really remarkably dumb but some sources give back garbage
@@ -69,7 +70,7 @@ func diffEvents(cfg Config, up []gocal.Event, gevent []*calendar.Event) ([]*cale
 		ids[e.ICalUID] = e
 	}
 
-	seenIds := make(map[string]interface{})
+	seenIds := make(map[string]any)
 
 	for _, e := range up {
 		if (*e.Start).Before(time.Now()) {
@@ -79,7 +80,7 @@ func diffEvents(cfg Config, up []gocal.Event, gevent []*calendar.Event) ([]*cale
 		i := getIDForEvent(cfg, e)
 
 		if _, ok := seenIds[i]; ok {
-			log.Printf("ID %s is a duplicate, not processing", i)
+			slog.Warn("ID is a duplicate, not processing", "id", i)
 			continue
 		}
 
@@ -167,12 +168,13 @@ func diffEvents(cfg Config, up []gocal.Event, gevent []*calendar.Event) ([]*cale
 		if e.Status != "cancelled" {
 			t, err := time.Parse(time.RFC3339, e.Start.DateTime)
 			if err != nil {
-				log.Fatalf("Unable to parse canceled date time %s: %v", e.Start.DateTime, err)
+				slog.Error("Unable to parse canceled date time", "datetime", e.Start.DateTime, "error", err)
+				panic(fmt.Sprintf("Unable to parse canceled date time %s: %v", e.Start.DateTime, err))
 			}
 			if time.Now().Before(t) {
 				del = append(del, e.Id)
 			} else {
-				log.Printf("Not deleting event %s because it already started", e.Summary)
+				slog.Info("Not deleting event because it already started", "summary", e.Summary)
 			}
 		}
 	}
@@ -222,10 +224,11 @@ func getIDForEvent(cfg Config, e gocal.Event) string {
 	case "":
 		return e.Uid
 	default:
-		log.Panicf("unknown id format %s", cfg.IDFormat)
+		slog.Error("unknown id format", "format", cfg.IDFormat)
+		panic(fmt.Sprintf("unknown id format %s", cfg.IDFormat))
 	}
 
-	//can't be reached due to default's Panicf
+	//can't be reached due to default's panic
 	return ""
 }
 
@@ -255,7 +258,8 @@ func parseGCalTime(t *calendar.EventDateTime) time.Time {
 	if t.Date != "" {
 		out, err := time.Parse("2006-01-02", t.Date)
 		if err != nil {
-			log.Fatalf("Unable to parse date %s: %v", t.Date, err)
+			slog.Error("Unable to parse date", "date", t.Date, "error", err)
+			panic(fmt.Sprintf("Unable to parse date %s: %v", t.Date, err))
 		}
 
 		return out
@@ -263,7 +267,8 @@ func parseGCalTime(t *calendar.EventDateTime) time.Time {
 
 	out, err := time.Parse(time.RFC3339, t.DateTime)
 	if err != nil {
-		log.Fatalf("Unable to parse date time %s: %v", t.DateTime, err)
+		slog.Error("Unable to parse date time", "datetime", t.DateTime, "error", err)
+		panic(fmt.Sprintf("Unable to parse date time %s: %v", t.DateTime, err))
 	}
 
 	return out
@@ -272,33 +277,36 @@ func parseGCalTime(t *calendar.EventDateTime) time.Time {
 func main() {
 	client := gcal.NewClient()
 	for _, cfg := range getConfig() {
-		log.Printf("Starting on calendar %s", cfg.URL)
+		slog.Info("Starting on calendar", "url", cfg.URL)
 		c, u, d := diffEvents(cfg, parseICal(cfg.URL), client.GetEventsForAttribute(map[string]string{"url": fmt.Sprintf("%x", sha256.Sum256([]byte(cfg.URL)))}))
-		log.Println(cfg.URL, len(c), len(u), len(d))
+		slog.Info("Processing results", "url", cfg.URL, "created", len(c), "updated", len(u), "deleted", len(d))
 
 		for _, e := range c {
 			if err := client.CreateEvent(e); err != nil {
 				var gErr *googleapi.Error
 				if errors.As(err, &gErr) && gErr.Code == http.StatusConflict {
-					log.Printf("Event already existed: %v, %v", e, gErr)
+					slog.Warn("Event already existed", "summary", e.Summary, "error", gErr)
 					continue
 				}
-				log.Fatalf("failed to create event: %v", err)
+				slog.Error("failed to create event", "error", err)
+				panic(fmt.Sprintf("failed to create event: %v", err))
 			}
 		}
 
 		for _, e := range u {
 			if err := client.UpdateEvent(e); err != nil {
-				log.Fatalf("failed to update event: %v", err)
+				slog.Error("failed to update event", "error", err)
+				panic(fmt.Sprintf("failed to update event: %v", err))
 			}
 		}
 		for _, id := range d {
 			if err := client.DeleteEvent(id); err != nil {
-				log.Fatalf("failed to update event: %v", err)
+				slog.Error("failed to delete event", "error", err)
+				panic(fmt.Sprintf("failed to delete event: %v", err))
 			}
 		}
 
-		log.Printf("finished with calendar")
+		slog.Info("finished with calendar")
 
 	}
 }

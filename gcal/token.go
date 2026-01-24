@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 
@@ -33,12 +33,14 @@ func getTokenFromWeb(config *oauth2.Config) *oauth2.Token {
 
 	var authCode string
 	if _, err := fmt.Scan(&authCode); err != nil {
-		log.Fatalf("Unable to read authorization code: %v", err)
+		slog.Error("Unable to read authorization code", "error", err)
+		panic(fmt.Sprintf("Unable to read authorization code: %v", err))
 	}
 
 	tok, err := config.Exchange(context.TODO(), authCode)
 	if err != nil {
-		log.Fatalf("Unable to retrieve token from web: %v", err)
+		slog.Error("Unable to retrieve token from web", "error", err)
+		panic(fmt.Sprintf("Unable to retrieve token from web: %v", err))
 	}
 	return tok
 }
@@ -60,10 +62,12 @@ func saveToken(path string, token *oauth2.Token) {
 	fmt.Printf("Saving credential file to: %s\n", path)
 	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		log.Fatalf("Unable to cache oauth token: %v", err)
+		slog.Error("Unable to cache oauth token", "error", err)
+		panic(fmt.Sprintf("Unable to cache oauth token: %v", err))
 	}
 	defer f.Close()
 	if err := json.NewEncoder(f).Encode(token); err != nil {
-		log.Fatalf("failed to save token: %v", err)
+		slog.Error("failed to save token", "error", err)
+		panic(fmt.Sprintf("failed to save token: %v", err))
 	}
 }

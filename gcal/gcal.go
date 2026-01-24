@@ -3,7 +3,7 @@ package gcal
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"time"
 
@@ -20,19 +20,22 @@ func NewClient() *Client {
 	ctx := context.Background()
 	b, err := os.ReadFile("credentials.json")
 	if err != nil {
-		log.Fatalf("Unable to read client secret file: %v", err)
+		slog.Error("Unable to read client secret file", "error", err)
+		panic(fmt.Sprintf("Unable to read client secret file: %v", err))
 	}
 
 	// If modifying these scopes, delete your previously saved token.json.
 	config, err := google.ConfigFromJSON(b, calendar.CalendarEventsScope, calendar.CalendarReadonlyScope)
 	if err != nil {
-		log.Fatalf("Unable to parse client secret file to config: %v", err)
+		slog.Error("Unable to parse client secret file to config", "error", err)
+		panic(fmt.Sprintf("Unable to parse client secret file to config: %v", err))
 	}
 	client := getClient(config)
 
 	srv, err := calendar.NewService(ctx, option.WithHTTPClient(client))
 	if err != nil {
-		log.Fatalf("Unable to retrieve Calendar client: %v", err)
+		slog.Error("Unable to retrieve Calendar client", "error", err)
+		panic(fmt.Sprintf("Unable to retrieve Calendar client: %v", err))
 	}
 
 	return &Client{svc: srv}
@@ -54,7 +57,8 @@ func (c *Client) GetEventsForAttribute(attrs map[string]string) []*calendar.Even
 	})
 
 	if err != nil {
-		log.Fatalf("Unable to list events: %v", err)
+		slog.Error("Unable to list events", "error", err)
+		panic(fmt.Sprintf("Unable to list events: %v", err))
 	}
 
 	return events

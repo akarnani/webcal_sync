@@ -1,4 +1,4 @@
-FROM golang:1.19-alpine AS builder
+FROM golang:1.21-alpine AS builder
 
 # Build arguments for multi-arch support
 ARG TARGETOS
