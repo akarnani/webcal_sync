@@ -28,7 +28,7 @@ func parseICal(url string) []gocal.Event {
 		panic(err)
 	}
 
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	b, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -227,9 +227,6 @@ func getIDForEvent(cfg Config, e gocal.Event) string {
 		slog.Error("unknown id format", "format", cfg.IDFormat)
 		panic(fmt.Sprintf("unknown id format %s", cfg.IDFormat))
 	}
-
-	//can't be reached due to default's panic
-	return ""
 }
 
 func isAllDayEvent(e gocal.Event) bool {

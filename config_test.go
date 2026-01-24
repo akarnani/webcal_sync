@@ -10,9 +10,9 @@ func TestGetConfig(t *testing.T) {
 	originalConfig, _ := os.ReadFile("config.yml")
 	defer func() {
 		if originalConfig != nil {
-			os.WriteFile("config.yml", originalConfig, 0644)
+			_ = os.WriteFile("config.yml", originalConfig, 0644)
 		} else {
-			os.Remove("config.yml")
+			_ = os.Remove("config.yml")
 		}
 	}()
 
@@ -107,7 +107,7 @@ func TestGetConfig(t *testing.T) {
 	})
 
 	t.Run("missing config file panics", func(t *testing.T) {
-		os.Remove("config.yml")
+		_ = os.Remove("config.yml")
 
 		defer func() {
 			if r := recover(); r == nil {
