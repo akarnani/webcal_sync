@@ -28,7 +28,7 @@ webcal_sync is a Go application that synchronizes webcal/iCal feeds to Google Ca
   - Config fields: `url` (iCal feed), `color_id` (calendar color), `id_format` (event ID strategy), `reminder` (minutes before event)
 
 - **helpers.go**: Utility functions
-  - `jsonEscape()`: Escapes strings for JSON encoding
+  - `unescapeICalText()`: Unescapes iCalendar TEXT escape sequences (`\n`, `\N`) per RFC5545, since gocal doesn't handle newline unescaping
 
 ### Event Identification
 

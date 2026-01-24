@@ -1,14 +1,11 @@
 package main
 
-import "encoding/json"
+import "strings"
 
-func jsonEscape(s string) string {
-	o, err := json.Marshal(s)
-	if err != nil {
-		// if it can't be json encoded just return the original
-		return s
-	}
-
-	str := string(o)
-	return str[1 : len(str)-1] // strip the leading/trailing quotes
+// unescapeICalText unescapes iCalendar TEXT value escape sequences per RFC5545.
+// The gocal library handles \\, \;, and \, but doesn't handle \n or \N for newlines.
+func unescapeICalText(s string) string {
+	s = strings.ReplaceAll(s, `\n`, "\n")
+	s = strings.ReplaceAll(s, `\N`, "\n")
+	return s
 }

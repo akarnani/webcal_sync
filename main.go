@@ -97,8 +97,8 @@ func diffEvents(cfg Config, up []gocal.Event, gevent []*calendar.Event) ([]*cale
 			Id: g.Id,
 		}
 
-		if e.Summary != g.Summary {
-			n.Summary = e.Summary
+		if unescapeICalText(e.Summary) != g.Summary {
+			n.Summary = unescapeICalText(e.Summary)
 			changed = true
 		}
 
@@ -121,13 +121,13 @@ func diffEvents(cfg Config, up []gocal.Event, gevent []*calendar.Event) ([]*cale
 			n.End = getEventTime(*e.End, allDay)
 			changed = true
 		}
-		if e.Description != g.Description {
-			n.Description = e.Description
+		if unescapeICalText(e.Description) != g.Description {
+			n.Description = unescapeICalText(e.Description)
 			n.ForceSendFields = append(n.ForceSendFields, "Description")
 			changed = true
 		}
-		if e.Location != g.Location {
-			n.Location = e.Location
+		if unescapeICalText(e.Location) != g.Location {
+			n.Location = unescapeICalText(e.Location)
 			n.ForceSendFields = append(n.ForceSendFields, "Location")
 			changed = true
 		}
@@ -183,9 +183,9 @@ func diffEvents(cfg Config, up []gocal.Event, gevent []*calendar.Event) ([]*cale
 func iCalToGEvent(cfg Config, e gocal.Event) *calendar.Event {
 	allDay := isAllDayEvent(e)
 	return &calendar.Event{
-		Summary:     jsonEscape(e.Summary),
-		Location:    jsonEscape(e.Location),
-		Description: jsonEscape(e.Description),
+		Summary:     unescapeICalText(e.Summary),
+		Location:    unescapeICalText(e.Location),
+		Description: unescapeICalText(e.Description),
 		Start:       getEventTime(*e.Start, allDay),
 		End:         getEventTime(*e.End, allDay),
 		ICalUID:     getIDForEvent(cfg, e),
