@@ -33,6 +33,9 @@ spec:
             {{- end }}
             image: {{ include "webcal-sync.image" . }}
             imagePullPolicy: {{ .Values.image.pullPolicy }}
+            env:
+            - name: HEALTHCHECK_URL
+              value: {{ .Values.healthcheckUrl | quote }}
             {{- with .Values.resources }}
             resources:
               {{- toYaml . | nindent 14 }}

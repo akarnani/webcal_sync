@@ -150,6 +150,7 @@ kubectl cp credentials.json copy-files:/config/credentials.json
 | `image.repository` | Docker image repository | `"akarnani/webcal_sync"` |
 | `image.tag` | Image tag | `"latest"` |
 | `schedule` | CronJob schedule | `"0 * * * *"` (hourly) |
+| `healthcheckUrl` | Healthcheck.io URL | `""` |
 | `persistence.enabled` | Enable persistent volume | `true` |
 | `persistence.existingClaim` | Use existing PVC | `""` |
 | `persistence.size` | Size of PVC | `1Gi` |

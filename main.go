@@ -8,6 +8,8 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
+	"os"
 	"reflect"
 	"regexp"
 	"strings"
@@ -272,6 +274,32 @@ func parseGCalTime(t *calendar.EventDateTime) time.Time {
 }
 
 func main() {
+	healthcheckURL := os.Getenv("HEALTHCHECK_URL")
+	if healthcheckURL != "" {
+		u, _ := url.JoinPath(healthcheckURL, "start")
+		pingHealthcheck(u)
+	}
+
+	success := false
+	defer func() {
+		if r := recover(); r != nil {
+			slog.Error("Application panicked", "recover", r)
+			if healthcheckURL != "" {
+				u, _ := url.JoinPath(healthcheckURL, "fail")
+				pingHealthcheck(u)
+			}
+			panic(r)
+		}
+		if healthcheckURL != "" {
+			if success {
+				pingHealthcheck(healthcheckURL)
+			} else {
+				u, _ := url.JoinPath(healthcheckURL, "fail")
+				pingHealthcheck(u)
+			}
+		}
+	}()
+
 	client := gcal.NewClient()
 	for _, cfg := range getConfig() {
 		slog.Info("Starting on calendar", "url", cfg.URL)
@@ -305,5 +333,19 @@ func main() {
 
 		slog.Info("finished with calendar")
 
+	}
+	success = true
+}
+
+func pingHealthcheck(url string) {
+	slog.Debug("Pinging healthcheck", "url", url)
+	resp, err := http.Get(url)
+	if err != nil {
+		slog.Error("Failed to ping healthcheck", "url", url, "error", err)
+		return
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		slog.Error("Healthcheck returned non-OK status", "url", url, "status", resp.StatusCode)
 	}
 }
