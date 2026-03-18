@@ -3,7 +3,7 @@
 image:
   repository: "akarnani/webcal_sync"
   pullPolicy: IfNotPresent
-  tag: "latest" # Override with specific version
+  tag: "" # Defaults to Chart.AppVersion; override with specific version if needed
 
 # CronJob schedule (default: run every hour)
 schedule: "0 * * * *"
@@ -53,7 +53,9 @@ cronjob:
   # Number of failed finished jobs to retain
   failedJobsHistoryLimit: 1
   # Restart policy for the job
-  restartPolicy: OnFailure
+  # Never spawns a new pod on each retry (preserving failed pod logs)
+  # OnFailure restarts in the same pod, losing logs on restart
+  restartPolicy: Never
   # Backoff limit for failed jobs
   backoffLimit: 3
 

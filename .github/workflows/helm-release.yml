@@ -37,9 +37,10 @@ jobs:
           # Remove 'v' prefix if present
           CHART_VERSION=${RELEASE_VERSION#v}
           sed -i "s/^version:.*/version: ${CHART_VERSION}/" helm/webcal-sync/Chart.yaml
-          sed -i "s/^appVersion:.*/appVersion: \"${RELEASE_VERSION}\"/" helm/webcal-sync/Chart.yaml
+          sed -i "s/^appVersion:.*/appVersion: \"${CHART_VERSION}\"/" helm/webcal-sync/Chart.yaml
           git add helm/webcal-sync/Chart.yaml
-          git commit -m "Update chart version to ${CHART_VERSION}" || true
+          git commit -m "chore: update chart version to ${CHART_VERSION}" || true
+          git push origin HEAD:main
 
       - name: Package Helm Chart
         run: |
