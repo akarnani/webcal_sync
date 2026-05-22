@@ -36,6 +36,8 @@ spec:
             env:
             - name: HEALTHCHECK_URL
               value: {{ .Values.healthcheckUrl | quote }}
+            - name: HEALTHCHECK_REPORT_FAILURES
+              value: {{ .Values.healthcheckReportFailures | quote }}
             {{- with .Values.resources }}
             resources:
               {{- toYaml . | nindent 14 }}

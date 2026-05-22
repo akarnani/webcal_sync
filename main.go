@@ -275,6 +275,7 @@ func parseGCalTime(t *calendar.EventDateTime) time.Time {
 
 func main() {
 	healthcheckURL := os.Getenv("HEALTHCHECK_URL")
+	reportFailures := os.Getenv("HEALTHCHECK_REPORT_FAILURES") == "true"
 	if healthcheckURL != "" {
 		u, _ := url.JoinPath(healthcheckURL, "start")
 		pingHealthcheck(u)
@@ -284,7 +285,7 @@ func main() {
 	defer func() {
 		if r := recover(); r != nil {
 			slog.Error("Application panicked", "recover", r)
-			if healthcheckURL != "" {
+			if healthcheckURL != "" && reportFailures {
 				u, _ := url.JoinPath(healthcheckURL, "fail")
 				pingHealthcheck(u)
 			}
@@ -293,7 +294,7 @@ func main() {
 		if healthcheckURL != "" {
 			if success {
 				pingHealthcheck(healthcheckURL)
-			} else {
+			} else if reportFailures {
 				u, _ := url.JoinPath(healthcheckURL, "fail")
 				pingHealthcheck(u)
 			}

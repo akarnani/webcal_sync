@@ -8,8 +8,10 @@ image:
 # CronJob schedule (default: run every hour)
 schedule: "0 * * * *"
 
-# Healthcheck.io URL (pings /start, /, and /fail)
+# Healthcheck.io URL (pings /start and /)
 healthcheckUrl: ""
+# Also ping /fail when a sync fails or panics
+healthcheckReportFailures: false
 
 # Volume configuration for storing config files
 persistence:
