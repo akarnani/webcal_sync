@@ -3,9 +3,9 @@ entries:
   webcal-sync:
   - apiVersion: v2
     appVersion: 0.6.0
-    created: "2026-03-18T20:02:49.048663665Z"
+    created: "2026-05-22T01:16:13.269007542Z"
     description: A Helm chart for webcal_sync - syncs iCal feeds to Google Calendar
-    digest: c4a33f941289423944d61609a701dd9b748cf8224841706bd3db9de6b8ba3223
+    digest: a715d62812c90eb74b48e1f09246431c0c85745067114bc5e8c07d6cf5403f59
     keywords:
     - calendar
     - ical
@@ -20,7 +20,7 @@ entries:
     version: 0.6.0
   - apiVersion: v2
     appVersion: 0.5.0
-    created: "2026-03-18T20:02:49.048215677Z"
+    created: "2026-05-22T01:16:13.268584219Z"
     description: A Helm chart for webcal_sync - syncs iCal feeds to Google Calendar
     digest: 8b0cf47be224d8c46401ede4ad7ef850e912dd8269e7d73ebd3bc19122fbb63c
     keywords:
@@ -37,7 +37,7 @@ entries:
     version: 0.2.0
   - apiVersion: v2
     appVersion: 0.5.0
-    created: "2026-03-18T20:02:49.047748974Z"
+    created: "2026-05-22T01:16:13.268092447Z"
     description: A Helm chart for webcal_sync - syncs iCal feeds to Google Calendar
     digest: f20d4a781bc0ffbe53212c079b8748f77a4fb655d2cefdafcf63a320182dd21e
     keywords:
@@ -52,4 +52,4 @@ entries:
     urls:
     - https://akarnani.github.io/webcal_sync/charts/webcal-sync-0.1.0.tgz
     version: 0.1.0
-generated: "2026-03-18T20:02:49.047088518Z"
+generated: "2026-05-22T01:16:13.267503053Z"
