@@ -79,7 +79,7 @@ Requires `config.yml` and `credentials.json` in the working directory. On first 
 ```bash
 golangci-lint run
 ```
-CI uses golangci-lint-action@v3.
+CI uses golangci-lint-action@v9 with golangci-lint v2.14.
 
 ### Dependencies
 Dependencies are vendored. To update:

@@ -18,7 +18,11 @@ func NewParser(r io.Reader) *Gocal {
 		Strict: StrictParams{
 			Mode: StrictModeFailFeed,
 		},
-		SkipBounds: false,
+		Duplicate: DuplicateParams{
+			Mode: DuplicateModeFailStrict,
+		},
+		SkipBounds:     false,
+		AllDayEventsTZ: time.UTC,
 	}
 }
 
@@ -70,7 +74,7 @@ func (gc *Gocal) Parse() error {
 			// as events spanning 24 hours.
 			if gc.buffer.RawStart.Value == gc.buffer.RawEnd.Value {
 				if value, ok := gc.buffer.RawEnd.Params["VALUE"]; ok && value == "DATE" {
-					gc.buffer.End, err = parser.ParseTime(gc.buffer.RawEnd.Value, gc.buffer.RawEnd.Params, parser.TimeEnd, true)
+					gc.buffer.End, err = parser.ParseTime(gc.buffer.RawEnd.Value, gc.buffer.RawEnd.Params, parser.TimeEnd, true, gc.AllDayEventsTZ)
 				}
 			}
 
@@ -81,11 +85,10 @@ func (gc *Gocal) Parse() error {
 				gc.buffer.End = &d
 			}
 
-			err := gc.checkEvent()
-			if err != nil {
+			if err := gc.checkEvent(); err != nil {
 				switch gc.Strict.Mode {
 				case StrictModeFailFeed:
-					return fmt.Errorf(fmt.Sprintf("gocal error: %s", err))
+					return fmt.Errorf("gocal error: %s", err)
 				case StrictModeFailEvent:
 					continue
 				}
@@ -104,6 +107,9 @@ func (gc *Gocal) Parse() error {
 				if !gc.SkipBounds && !gc.IsInRange(*gc.buffer) {
 					continue
 				}
+				if gc.Strict.Mode == StrictModeFailEvent && !gc.buffer.Valid {
+					continue
+				}
 
 				gc.Events = append(gc.Events, *gc.buffer)
 			}
@@ -115,8 +121,23 @@ func (gc *Gocal) Parse() error {
 			}
 			ctx = ctx.Previous
 		} else if ctx.Value == ContextEvent {
-			err := gc.parseEvent(l)
-			if err != nil {
+			if err := gc.parseEvent(l); err != nil {
+				if _, ok := err.(DuplicateAttributeError); ok {
+					switch gc.Duplicate.Mode {
+					case DuplicateModeFailStrict:
+						switch gc.Strict.Mode {
+						case StrictModeFailFeed:
+							return fmt.Errorf("gocal error: %s", err)
+						case StrictModeFailEvent:
+							gc.buffer.Valid = false
+							continue
+						case StrictModeFailAttribute:
+							gc.buffer.Valid = false
+							continue
+						}
+					}
+				}
+
 				return fmt.Errorf(fmt.Sprintf("gocal error: %s", err))
 			}
 		} else {
@@ -153,7 +174,7 @@ func (gc *Gocal) parseLine() (*Line, error, bool) {
 		}
 	}
 
-	tokens := strings.SplitN(l, ":", 2)
+	tokens := splitLineTokens(l)
 	if len(tokens) < 2 {
 		return nil, fmt.Errorf("could not parse item: %s", l), done
 	}
@@ -163,9 +184,31 @@ func (gc *Gocal) parseLine() (*Line, error, bool) {
 	return &Line{Key: attr, Params: params, Value: parser.UnescapeString(strings.TrimPrefix(tokens[1], " "))}, nil, done
 }
 
-func (gc *Gocal) parseEvent(l *Line) error {
-	var err error
+// splitLineTokens assures that property parameters that are quoted due to containing special
+// characters (like COLON, SEMICOLON, COMMA) are not split.
+// See RFC5545, 3.1.1.
+func splitLineTokens(line string) []string {
+	// go's Split is highly optimized -> use, unless we cannot
+	if idxQuote := strings.Index(line, `"`); idxQuote == -1 {
+		return strings.SplitN(line, ":", 2)
+	} else if idxColon := strings.Index(line, ":"); idxQuote > idxColon {
+		return []string{line[0:idxColon], line[idxColon+1:]}
+	}
 
+	// otherwise, we need to do it ourselves, let's keep it simple at least:
+	quoted := false
+	size := len(line)
+	for idx, char := range []byte(line) {
+		if char == '"' {
+			quoted = !quoted
+		} else if char == ':' && !quoted && idx+1 < size {
+			return []string{line[0:idx], line[idx+1:]}
+		}
+	}
+	return []string{line}
+}
+
+func (gc *Gocal) parseEvent(l *Line) error {
 	// If this is nil, that means we did not get a BEGIN:VEVENT
 	if gc.buffer == nil {
 		return nil
@@ -173,116 +216,97 @@ func (gc *Gocal) parseEvent(l *Line) error {
 
 	switch l.Key {
 	case "UID":
-		if gc.buffer.Uid != "" {
-			return fmt.Errorf("could not parse duplicate %s: %s", l.Key, l.Value)
+		if err := resolve(gc, l, &gc.buffer.Uid, resolveString, nil); err != nil {
+			return err
 		}
-
-		gc.buffer.Uid = l.Value
 	case "SUMMARY":
-		if gc.buffer.Summary != "" {
-			return fmt.Errorf("could not parse duplicate %s: %s", l.Key, l.Value)
+		if err := resolve(gc, l, &gc.buffer.Summary, resolveString, nil); err != nil {
+			return err
 		}
-
-		gc.buffer.Summary = l.Value
 	case "DESCRIPTION":
-		if gc.buffer.Description != "" {
-			return fmt.Errorf("could not parse duplicate %s: %s", l.Key, l.Value)
+		if err := resolve(gc, l, &gc.buffer.Description, resolveString, nil); err != nil {
+			return err
 		}
-
-		gc.buffer.Description = l.Value
 	case "DTSTART":
-		if gc.buffer.Start != nil {
-			return fmt.Errorf("could not parse duplicate %s: %s", l.Key, l.Value)
-		}
-
-		gc.buffer.Start, err = parser.ParseTime(l.Value, l.Params, parser.TimeStart, false)
-		gc.buffer.RawStart = RawDate{Value: l.Value, Params: l.Params}
-		if err != nil {
-			return fmt.Errorf("could not parse %s: %s", l.Key, l.Value)
+		if err := resolve(gc, l, &gc.buffer.Start, resolveDate, func(gc *Gocal, out *time.Time) {
+			gc.buffer.RawStart = RawDate{Value: l.Value, Params: l.Params}
+		}); err != nil {
+			return err
 		}
 	case "DTEND":
-		gc.buffer.End, err = parser.ParseTime(l.Value, l.Params, parser.TimeEnd, false)
-		gc.buffer.RawEnd = RawDate{Value: l.Value, Params: l.Params}
-		if err != nil {
-			return fmt.Errorf("could not parse %s: %s", l.Key, l.Value)
+		if err := resolve(gc, l, &gc.buffer.End, resolveDateEnd, func(gc *Gocal, out *time.Time) {
+			gc.buffer.RawEnd = RawDate{Value: l.Value, Params: l.Params}
+		}); err != nil {
+			return err
 		}
 	case "DURATION":
+		// The DURATION attribute should imply DTEND as DTSTART+DURATION.
+		// If we have not processed DTSTART yet, add this to the delayed attributes to be processed later.
 		if gc.buffer.Start == nil {
 			gc.buffer.delayed = append(gc.buffer.delayed, l)
 			return nil
 		}
 
-		duration, err := parser.ParseDuration(l.Value)
-		if err != nil {
-			return fmt.Errorf("could not parse %s: %s", l.Key, l.Value)
+		if err := resolve(gc, l, &gc.buffer.Duration, resolveDuration, func(gc *Gocal, out *time.Duration) {
+			if out != nil {
+				gc.buffer.Duration = out
+				end := gc.buffer.Start.Add(*out)
+				gc.buffer.End = &end
+			}
+		}); err != nil {
+			return err
 		}
-		gc.buffer.Duration = duration
-		end := gc.buffer.Start.Add(*duration)
-		gc.buffer.End = &end
 	case "DTSTAMP":
-		gc.buffer.Stamp, err = parser.ParseTime(l.Value, l.Params, parser.TimeStart, false)
-		if err != nil {
-			return fmt.Errorf("could not parse %s: %s", l.Key, l.Value)
+		if err := resolve(gc, l, &gc.buffer.Stamp, resolveDate, nil); err != nil {
+			return err
 		}
 	case "CREATED":
-		if gc.buffer.Created != nil {
-			return fmt.Errorf("could not parse duplicate %s: %s", l.Key, l.Value)
-		}
-
-		gc.buffer.Created, err = parser.ParseTime(l.Value, l.Params, parser.TimeStart, false)
-		if err != nil {
-			return fmt.Errorf("could not parse %s: %s", l.Key, l.Value)
+		if err := resolve(gc, l, &gc.buffer.Created, resolveDate, nil); err != nil {
+			return err
 		}
 	case "LAST-MODIFIED":
-		if gc.buffer.LastModified != nil {
-			return fmt.Errorf("could not parse duplicate %s: %s", l.Key, l.Value)
-		}
-
-		gc.buffer.LastModified, err = parser.ParseTime(l.Value, l.Params, parser.TimeStart, false)
-		if err != nil {
-			return fmt.Errorf("could not parse duplicate %s: %s", l.Key, l.Value)
+		if err := resolve(gc, l, &gc.buffer.LastModified, resolveDate, nil); err != nil {
+			return err
 		}
 	case "RRULE":
 		if len(gc.buffer.RecurrenceRule) != 0 {
-			return fmt.Errorf("could not parse duplicate %s: %s", l.Key, l.Value)
+			return NewDuplicateAttribute(l.Key, l.Value)
 		}
 
-		gc.buffer.IsRecurring = true
-		gc.buffer.RecurrenceRule, err = parser.ParseRecurrenceRule(l.Value)
+		if gc.buffer.RecurrenceRule == nil || gc.Duplicate.Mode == DuplicateModeKeepLast {
+			var err error
+
+			gc.buffer.IsRecurring = true
+			if gc.buffer.RecurrenceRule, err = parser.ParseRecurrenceRule(l.Value); err != nil {
+				return err
+			}
+		}
 	case "RECURRENCE-ID":
-		if gc.buffer.RecurrenceID != "" {
-			return fmt.Errorf("could not parse duplicate %s: %s", l.Key, l.Value)
+		if err := resolve(gc, l, &gc.buffer.RecurrenceID, resolveString, nil); err != nil {
+			return err
 		}
-
-		gc.buffer.RecurrenceID = l.Value
 	case "EXDATE":
-		d, err := parser.ParseTime(l.Value, map[string]string{}, parser.TimeStart, false)
+		/*
+			Reference: https://icalendar.org/iCalendar-RFC-5545/3-8-5-1-exception-date-times.html
+			Several parameters are allowed.  We should pass parameters we have
+		*/
+		d, err := parser.ParseTime(l.Value, l.Params, parser.TimeStart, false, gc.AllDayEventsTZ)
 		if err == nil {
 			gc.buffer.ExcludeDates = append(gc.buffer.ExcludeDates, *d)
 		}
 	case "SEQUENCE":
 		gc.buffer.Sequence, _ = strconv.Atoi(l.Value)
 	case "LOCATION":
-		if gc.buffer.Location != "" {
-			return fmt.Errorf("could not parse duplicate %s: %s", l.Key, l.Value)
+		if err := resolve(gc, l, &gc.buffer.Location, resolveString, nil); err != nil {
+			return err
 		}
-
-		gc.buffer.Location = l.Value
 	case "STATUS":
-		if gc.buffer.Status != "" {
-			return fmt.Errorf("could not parse duplicate %s: %s", l.Key, l.Value)
+		if err := resolve(gc, l, &gc.buffer.Status, resolveString, nil); err != nil {
+			return err
 		}
-
-		gc.buffer.Status = l.Value
 	case "ORGANIZER":
-		if gc.buffer.Organizer != nil {
-			return fmt.Errorf("could not parse duplicate %s: %s", l.Key, l.Value)
-		}
-
-		gc.buffer.Organizer = &Organizer{
-			Cn:          l.Params["CN"],
-			DirectoryDn: l.Params["DIR"],
-			Value:       l.Value,
+		if err := resolve(gc, l, &gc.buffer.Organizer, resolveOrganizer, nil); err != nil {
+			return err
 		}
 	case "ATTENDEE":
 		attendee := Attendee{
@@ -316,21 +340,17 @@ func (gc *Gocal) parseEvent(l *Line) error {
 			Value:    l.Value,
 		})
 	case "GEO":
-		if gc.buffer.Geo != nil {
-			return fmt.Errorf("could not parse duplicate %s: %s", l.Key, l.Value)
-		}
-
-		lat, long, err := parser.ParseGeo(l.Value)
-		if err != nil {
+		if err := resolve(gc, l, &gc.buffer.Geo, resolveGeo, nil); err != nil {
 			return err
 		}
-		gc.buffer.Geo = &Geo{lat, long}
 	case "CATEGORIES":
 		gc.buffer.Categories = strings.Split(l.Value, ",")
 	case "URL":
 		gc.buffer.URL = l.Value
 	case "COMMENT":
 		gc.buffer.Comment = l.Value
+	case "CLASS":
+		gc.buffer.Class = l.Value
 	default:
 		key := strings.ToUpper(l.Key)
 		if strings.HasPrefix(key, "X-") {

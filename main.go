@@ -341,7 +341,7 @@ func pingHealthcheck(url string) {
 		slog.Error("Failed to ping healthcheck", "url", url, "error", err)
 		return
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		slog.Error("Healthcheck returned non-OK status", "url", url, "status", resp.StatusCode)
 	}

@@ -16,21 +16,25 @@ var (
 	TZMapper func(s string) (*time.Location, error)
 )
 
-func ParseTime(s string, params map[string]string, ty int, allday bool) (*time.Time, error) {
+func ParseTime(s string, params map[string]string, ty int, allday bool, allDayTZ *time.Location) (*time.Time, error) {
 	var err error
 	var tz *time.Location
 
 	format := ""
 
 	if params["VALUE"] == "DATE" || len(s) == 8 {
+		/*
+			Reference: https://icalendar.org/iCalendar-RFC-5545/3-3-4-date.html
+			DATE values are a specific format.  They should not include time information
+		*/
 		t, err := time.Parse("20060102", s)
 		if ty == TimeStart {
-			t = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
+			t = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, allDayTZ)
 		} else if ty == TimeEnd {
 			if allday {
-				t = time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 999, time.UTC)
+				t = time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 999, allDayTZ)
 			} else {
-				t = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC).Add(-1 * time.Millisecond)
+				t = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, allDayTZ).Add(-1 * time.Millisecond)
 			}
 		}
 
