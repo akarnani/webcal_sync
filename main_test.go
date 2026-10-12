@@ -503,6 +503,33 @@ func TestDiffEvents(t *testing.T) {
 		}
 	})
 
+	t.Run("deletes all-day events not in upstream", func(t *testing.T) {
+		upstreamEvents := []gocal.Event{}
+
+		gcalEvents := []*calendar.Event{
+			{
+				Id:      "gcal-id-allday",
+				ICalUID: "deleted-allday-event",
+				Summary: "All Day To Be Deleted",
+				Start:   getEventTime(futureTime.Add(24*time.Hour), true),
+				Status:  "confirmed",
+			},
+			{
+				Id:      "gcal-id-allday-past",
+				ICalUID: "past-allday-event",
+				Summary: "Past All Day",
+				Start:   getEventTime(pastTime.Add(-24*time.Hour), true),
+				Status:  "confirmed",
+			},
+		}
+
+		_, _, delete := diffEvents(cfg, upstreamEvents, gcalEvents)
+
+		if len(delete) != 1 || delete[0] != "gcal-id-allday" {
+			t.Errorf("Expected delete of only 'gcal-id-allday', got %v", delete)
+		}
+	})
+
 	t.Run("ignores past events", func(t *testing.T) {
 		upstreamEvents := []gocal.Event{
 			{

@@ -168,12 +168,8 @@ func diffEvents(cfg Config, up []gocal.Event, gevent []*calendar.Event) ([]*cale
 	del := make([]string, 0, len(ids))
 	for _, e := range ids {
 		if e.Status != "cancelled" {
-			t, err := time.Parse(time.RFC3339, e.Start.DateTime)
-			if err != nil {
-				slog.Error("Unable to parse canceled date time", "datetime", e.Start.DateTime, "error", err)
-				panic(fmt.Sprintf("Unable to parse canceled date time %s: %v", e.Start.DateTime, err))
-			}
-			if time.Now().Before(t) {
+			// all-day events only have Start.Date set, so parse either form
+			if time.Now().Before(parseGCalTime(e.Start)) {
 				del = append(del, e.Id)
 			} else {
 				slog.Info("Not deleting event because it already started", "summary", e.Summary)
