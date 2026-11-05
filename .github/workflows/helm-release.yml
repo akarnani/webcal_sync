@@ -16,7 +16,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
 
@@ -26,9 +26,9 @@ jobs:
           git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
 
       - name: Install Helm
-        uses: azure/setup-helm@v3
+        uses: azure/setup-helm@v5.0.1
         with:
-          version: v3.12.0
+          version: v4.3.1
 
       - name: Update Chart Version on Release
         if: github.event_name == 'release'
@@ -48,7 +48,7 @@ jobs:
           helm package helm/webcal-sync -d .cr-release-packages
 
       - name: Checkout gh-pages
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7.0.1
         with:
           ref: gh-pages
           path: gh-pages
