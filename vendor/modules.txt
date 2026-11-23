@@ -81,10 +81,8 @@ github.com/googleapis/gax-go/v2/callctx
 github.com/googleapis/gax-go/v2/internal
 github.com/googleapis/gax-go/v2/internallog
 github.com/googleapis/gax-go/v2/internallog/internal
-# github.com/kr/text v0.2.0
-## explicit
-# go.opentelemetry.io/auto/sdk v1.2.1
-## explicit; go 1.24.0
+# go.opentelemetry.io/auto/sdk v1.2.2
+## explicit; go 1.25.0
 go.opentelemetry.io/auto/sdk
 go.opentelemetry.io/auto/sdk/internal/telemetry
 # go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.72.0
@@ -133,7 +131,7 @@ golang.org/x/crypto/cryptobyte/asn1
 golang.org/x/crypto/hkdf
 golang.org/x/crypto/internal/alias
 golang.org/x/crypto/internal/poly1305
-# golang.org/x/net v0.62.0
+# golang.org/x/net v0.63.0
 ## explicit; go 1.26.0
 golang.org/x/net/http/httpguts
 golang.org/x/net/http2
@@ -167,7 +165,7 @@ golang.org/x/text/secure/bidirule
 golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
-# google.golang.org/api v0.315.0
+# google.golang.org/api v0.316.0
 ## explicit; go 1.26.0
 google.golang.org/api/calendar/v3
 google.golang.org/api/googleapi
@@ -181,7 +179,7 @@ google.golang.org/api/internal/third_party/uritemplates
 google.golang.org/api/option
 google.golang.org/api/option/internaloption
 google.golang.org/api/transport/http
-# google.golang.org/genproto/googleapis/rpc v0.0.0-20261110000943-09e21b237f2c
+# google.golang.org/genproto/googleapis/rpc v0.0.0-20261118221215-c8830f628b3f
 ## explicit; go 1.26.0
 google.golang.org/genproto/googleapis/rpc/code
 google.golang.org/genproto/googleapis/rpc/errdetails
